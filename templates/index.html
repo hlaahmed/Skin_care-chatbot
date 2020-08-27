@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+ <title>Call-Center-Bot</title>
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+ <style>
+ * {
+  background-color: peachpuff;
+ box-sizing: border-box
+ }/* Set height of body and the document to 100% */
+ body, html {
+ height: 100%;
+ margin: 0;
+ font-family: Arial;
+ }
+ #chatbox {
+ margin-left: auto;
+ margin-right: auto;
+ width: 40%;
+ margin-top: 60px;
+ }
+ #userInput {
+ margin-left: auto;
+ margin-right: auto;
+ width: 40%;
+ margin-top: 60px;
+ }
+ #textInput {
+ width: 90%;
+ border: none;
+ border-bottom: 3px solid black;
+ font-family: monospace;
+ font-size: 17px;
+ }
+ .userText {
+ color: white;
+ font-family: monospace;
+ font-size: 17px;
+ text-align: right;
+ line-height: 30px;
+ }
+ .userText span {
+ background-color: #808080;
+ padding: 10px;
+ border-radius: 2px;
+ }
+ .botText {
+ color: white;
+ font-family: monospace;
+ font-size: 17px;
+ text-align: left;
+ line-height: 30px;
+ }
+ .botText span {
+ background-color: rosybrown;
+ padding: 10px;
+ border-radius: 2px;
+ }
+ #tidbit {
+ position: absolute;
+ bottom: 0;
+ right: 0;
+ width: 300px;
+ }
+ .boxed {
+ margin-left: auto;
+ margin-right: auto;
+ width: 78%;
+ margin-top: 115px;
+ border: 1px solid black;
+ }
+ </style>
+</head>
+   <p align="center"><img src="https://image.flaticon.com/icons/svg/2040/2040946.svg" alt="skin-BOT" height="160" width="160"></p>
+<body>
+ <div>
+  <h1 align="center"><b>Welcome to Skin-care chatbot</b></h1>
+ <h4 align="center"><b>developed by team 404</b></h4>
+ <div class="boxed">
+ <div>
+ <div id="chatbox">
+ <p class="botText">
+ <span>Hi! I'm 404-BOT, you can text me, and if you are lazy ;) you can record your answers by clicking on speak button on bottom left</span>
+ </p>
+ </div>
+ <div id="userInput">
+ <input id="textInput" type="text"  name="msg" placeholder="Message" />
+ </div>
+ </div>
+   <button id='btnGiveCommand'>Speak!</button>
+  <button type="button" id="mic">Record a voice note</button>
+  <button type="button" id="record" hidden>Record</button>
+  </div>
+ </div>
+  <! -- a script for speech recognition, it calls get bot response script-->
+ <script>
+        var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+        var recognition = new SpeechRecognition();
+        var mail = new SpeechRecognition();
+        mail.lang= 'en-US';
+        mail.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        document.getElementById("btnGiveCommand").onclick = function()
+        {
+         recognition.start();
+        }
+        recognition.onresult = function(event) {
+                 var last = event.results.length - 1;
+                 var command = event.results[last][0].transcript;
+                 getBotResponse(command);
+                }
+                document.getElementById("play").onclick= function()
+                {
+                 mail.start();
+                }
+                mail.onresult = function(event) {
+                  var last = event.results.length - 1;
+                  vm = event.results[last][0].transcript;
+                }
+
+                document.getElementById("record").onclick = function()
+                {
+                    var synth = window.speechSynthesis;
+                    voice = synth.getVoices[0];
+                    var utterThis = new SpeechSynthesisUtterance(vm);
+                    utterThis.voice=voice;
+                    synth.speak(utterThis);
+                    file = vm+".mp3";
+                    file.save();
+
+                }
+
+ </script>
+
+  <! -- script for speech synthesis -->
+  <script>
+   function talkback(data) {
+   var synth = window.speechSynthesis;
+   voices = synth.getVoices[1];
+   var utterThis = new SpeechSynthesisUtterance(data);
+   utterThis.voice=voices;
+   synth.speak(utterThis);
+   }
+  </script>
+  <! -- script for talking user text msgs printing them, getting bot reply and printing them, it call speech synthesis script -->
+ <script>
+ function getBotResponse(rawText) {
+ var rawText = rawText;
+ var userHtml = '<p class="userText"><span>' + rawText + "</span></p>";
+ $("#textInput").val("");
+ $("#chatbox").append(userHtml);
+ document
+ .getElementById("userInput")
+ .scrollIntoView({ block: "start", behavior: "smooth" });
+ $.get("/get", { msg: rawText }).done(function (data) {
+ var botHtml = '<p class="botText"><span>' + data + "</span></p>";
+ talkback(data);
+ $("#chatbox").append(botHtml);
+ document
+ .getElementById("userInput")
+ .scrollIntoView({ block: "start", behavior: "smooth" });
+ });
+
+ }
+ $("#textInput").keypress(function (e) {
+ if (e.which == 13) {
+ getBotResponse($("#textInput").val());
+ }
+ });
+ </script>
+      <ul id="recordings"></ul>
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const getMic = document.getElementById('mic');
+        const recordButton = document.getElementById('record');
+        const list = document.getElementById('recordings');
+        if ('MediaRecorder' in window) {
+          getMic.addEventListener('click', async () => {
+            getMic.setAttribute('hidden', 'hidden');
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: false
+              });
+              const mimeType = 'audio/webm';
+              let chunks = [];
+              const recorder = new MediaRecorder(stream, { type: mimeType });
+              recorder.addEventListener('dataavailable', event => {
+                if (typeof event.data === 'undefined') return;
+                if (event.data.size === 0) return;
+                chunks.push(event.data);
+              });
+              recorder.addEventListener('stop', () => {
+                const recording = new Blob(chunks, {
+                  type: mimeType
+                });
+                renderRecording(recording, list);
+                chunks = [];
+              });
+              recordButton.removeAttribute('hidden');
+              recordButton.addEventListener('click', () => {
+                if (recorder.state === 'inactive') {
+                  recorder.start();
+                  recordButton.innerText = 'Stop';
+                } else {
+                  recorder.stop();
+                  recordButton.innerText = 'Record';
+                }
+              });
+            } catch {
+              renderError(
+                'You denied access to the microphone so this demo will not work.'
+              );
+            }
+          });
+        } else {
+          renderError(
+            "Sorry, your browser doesn't support the MediaRecorder API, so this demo will not work."
+          );
+        }
+      });
+
+      function renderError(message) {
+        const main = document.querySelector('main');
+        main.innerHTML = `<div class="error"><p>${message}</p></div>`;
+      }
+
+      function renderRecording(blob, list) {
+        const blobUrl = URL.createObjectURL(blob);
+        const li = document.createElement('li');
+        const audio = document.createElement('audio');
+        audio.setAttribute('src', blobUrl);
+        audio.setAttribute('controls', 'controls');
+        li.appendChild(audio);
+        list.appendChild(li);
+      }
+    </script>
+ </div>
+</div>
+</body>
+</html>
